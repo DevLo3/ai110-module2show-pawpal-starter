@@ -96,3 +96,7 @@ pip install -r requirements.txt
 5. Add tests to verify key behaviors.
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
+
+## 📸 Demo
+
+<a href="PawPal+.png" target="_blank"><img src='PawPal+.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>.
