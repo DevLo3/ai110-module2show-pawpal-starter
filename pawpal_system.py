@@ -192,19 +192,14 @@ class Scheduler:
         tasks: list[Task],
         busy_periods: Optional[list[BusyPeriod]] = None,
     ) -> None:
+        """Store the pets, parents, tasks, and busy periods used to generate a schedule."""
         self.target_pets = target_pets
         self.parents = parents
         self.tasks = tasks
         self.busy_periods = busy_periods or []
 
     def generate_schedule(self) -> Schedule:
-        """
-        Build and return a Schedule by:
-        1. Deriving the time window from parent preferences (or defaulting to 8am–8pm).
-        2. Computing free windows per day by subtracting busy periods.
-        3. Sorting tasks by priority (high → medium → low) and fitting them greedily.
-        4. Attaching reasoning text that explains each scheduling decision.
-        """
+        """Build and return a Schedule by fitting prioritized tasks into free time windows."""
 
         # 1. Derive time window from parent preferences
         all_preferences = [p for parent in self.parents for p in parent.time_preferences]
