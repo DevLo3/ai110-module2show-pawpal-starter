@@ -17,6 +17,15 @@ class TimePreference(Enum):
     NIGHT = "night"
 
 
+# Maps each TimePreference to a concrete (start, end) time window for use by the Scheduler.
+TIME_PREFERENCE_WINDOWS: dict[TimePreference, tuple[time, time]] = {
+    TimePreference.MORNING: (time(6, 0), time(12, 0)),
+    TimePreference.MIDDAY:  (time(12, 0), time(15, 0)),
+    TimePreference.EVENING: (time(15, 0), time(20, 0)),
+    TimePreference.NIGHT:   (time(20, 0), time(23, 59)),
+}
+
+
 # ---------------------------------------------------------------------------
 # Core data classes
 # ---------------------------------------------------------------------------
@@ -29,6 +38,7 @@ class Pet:
     weight: float
     picture: Optional[str] = None
     birthday: Optional[date] = None
+    tasks: list[Task] = field(default_factory=list)
 
     def edit_pet(self, **kwargs) -> None:
         """Update one or more pet attributes."""
@@ -45,6 +55,7 @@ class Parent:
     email: str
     location: str
     time_preferences: list[TimePreference] = field(default_factory=list)
+    pets: list[Pet] = field(default_factory=list)
     # Tracks whether this parent is active; at least 1 must remain active at all times.
     active: bool = True
 
@@ -68,6 +79,7 @@ class Task:
     priority: str           # e.g. "low" | "medium" | "high"
     target_pet: Optional[Pet] = None
     daily_frequency: int = 1
+    responsible_parents: list[Parent] = field(default_factory=list)
 
     def edit(self, **kwargs) -> None:
         """Update one or more task attributes."""
@@ -91,7 +103,7 @@ class BusyPeriod:
     name: str
     start_time: time
     duration: int           # minutes
-    weekly_frequency: int
+    effective_days: list[str]   # e.g. ["Monday", "Wednesday"]
     owners: list[Parent] = field(default_factory=list)
 
     def edit_busy_period(self, **kwargs) -> None:
@@ -147,10 +159,12 @@ class Scheduler:
         self,
         target_pets: list[Pet],
         parents: list[Parent],
+        tasks: list[Task],
         busy_periods: Optional[list[BusyPeriod]] = None,
     ) -> None:
         self.target_pets = target_pets
         self.parents = parents
+        self.tasks = tasks
         self.busy_periods = busy_periods or []
 
     def generate_schedule(self) -> Schedule:

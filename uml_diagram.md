@@ -17,6 +17,7 @@ classDiagram
         +String email
         +String location
         +List~TimePreference~ timePreferences
+        +List~Pet~ pets
         +create()
         +edit()
         +deactivate()
@@ -29,6 +30,7 @@ classDiagram
         +float weight
         +String picture
         +Date birthday
+        +List~Task~ tasks
         +createPet()
         +editPet()
         +deletePet()
@@ -41,6 +43,7 @@ classDiagram
         +int dailyFrequency
         +String priority
         +Pet targetPet
+        +List~Parent~ responsibleParents
         +create()
         +edit()
         +delete()
@@ -51,7 +54,7 @@ classDiagram
         +String name
         +Time startTime
         +int duration
-        +int weeklyFrequency
+        +List~String~ effectiveDays
         +List~Parent~ owners
         +createBusyPeriod()
         +editBusyPeriod()
@@ -61,6 +64,7 @@ classDiagram
     class Scheduler {
         +List~Pet~ targetPets
         +List~Parent~ parents
+        +List~Task~ tasks
         +List~BusyPeriod~ busyPeriods
         +generateSchedule() Schedule
     }

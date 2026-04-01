@@ -10,13 +10,17 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+    My initial design used five classes connected around a central `Scheduler` that takes pets, parents, and busy periods as inputs and produces a `Schedule` as output. 
 - What classes did you include, and what responsibilities did you assign to each?
+    I included `Pet` (stores pet profile data), `Parent` (stores owner info and time preferences), `Task` (represents a care action tied to a specific pet), `Block` (marks when owners are unavailable), and `Schedule` (contains the logic to generate a plan and creates the output object that holds the resulting task list and reasoning). I also added a `TimePreference` enum to cleanly represent when parents are available throughout the day.
 
 
 **b. Design changes**
 
 - Did your design change during implementation?
+    Yes
 - If yes, describe at least one change and why you made it.
+    I made the scheduling logic separate from the Schedule data objects, via a separate Scheduler class, to make the system easier to reason about and extend. Additionally I changed the name of my `Block` class to `busyPeriod`as Claude initially misinterpreted the term Block to refer to a block of tasks, instead of interpreting it as a period of time where tasks shouldn't be scheduled, which is what I meant. To prevent further confusion, I decided to change the class's name to one suggested by Claude (busyPeriod). Finally, I added tasks: list[Task] to `Pet` and added pets: list[Pet] to `Parent`, after Claude identified these as missing relationships. With that change, Pets now own their tasks directly and tasks know whos' doing them.
 
 ---
 
