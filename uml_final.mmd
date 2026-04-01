@@ -1,0 +1,108 @@
+classDiagram
+    direction TB
+
+    class TimePreference {
+        <<enumeration>>
+        MORNING
+        MIDDAY
+        EVENING
+        NIGHT
+    }
+
+    class Recurrence {
+        <<enumeration>>
+        DAILY
+        WEEKLY
+    }
+
+    class Parent {
+        +String name
+        +String email
+        +String location
+        +bool active
+        +List~TimePreference~ timePreferences
+        +List~Pet~ pets
+        +edit()
+        +deactivate()
+    }
+
+    class Pet {
+        +String name
+        +int age
+        +String breed
+        +float weight
+        +String picture
+        +Date birthday
+        +List~Task~ tasks
+        +add_task(task)
+        +edit_pet()
+        +delete_pet()
+    }
+
+    class Task {
+        +String name
+        +String task_type
+        +int duration
+        +int dailyFrequency
+        +String priority
+        +int minInterval
+        +bool strictInterval
+        +bool isComplete
+        +Recurrence recurrence
+        +Date nextDue
+        +Time scheduledTime
+        +Pet targetPet
+        +List~Parent~ responsibleParents
+        +mark_complete() Task
+        +mark_incomplete()
+        +edit()
+        +delete()
+        +duplicate() Task
+        +__lt__(other) bool
+    }
+
+    class BusyPeriod {
+        +String name
+        +Time startTime
+        +int duration
+        +List~String~ effectiveDays
+        +List~Parent~ owners
+        +edit_busy_period()
+        +delete_busy_period()
+    }
+
+    class Scheduler {
+        +List~Pet~ targetPets
+        +List~Parent~ parents
+        +List~Task~ tasks
+        +List~BusyPeriod~ busyPeriods
+        +generate_schedule() Schedule
+        +detect_conflicts(tasks) List~String~
+        -_check_interval_conflicts(intervals) List~String~
+    }
+
+    class Schedule {
+        +bool is24HrFormat
+        +List~String~ effectiveDays
+        +Time startTime
+        +Time endTime
+        +List~Task~ tasksScheduled
+        +String reasoning
+        +List~String~ conflicts
+        +edit()
+        +delete()
+        +calculate_task_count() int
+        +generate_reasoning_text() String
+        +filter_tasks(is_complete, pet_name) List~Task~
+    }
+
+    Parent --> TimePreference        : uses
+    Parent "1..*" --> "0..*" Pet     : owns
+    Task "0..*" --> "1" Pet          : targets
+    Task --> Recurrence              : uses
+    BusyPeriod "0..*" --> "1..*" Parent : assigned to
+    Scheduler "1" --> "1..*" Pet     : schedules for
+    Scheduler "1" --> "1..*" Parent  : managed by
+    Scheduler "1" --> "0..*" BusyPeriod : avoids
+    Scheduler "1" ..> "1" Schedule   : produces
+    Schedule "1" --> "0..*" Task     : contains

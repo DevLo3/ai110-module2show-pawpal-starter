@@ -199,13 +199,71 @@ if st.button("Generate Schedule"):
 
 if st.session_state.schedule:
     schedule = st.session_state.schedule
+
+    # ── Header ────────────────────────────────────────────────────────────────
     st.success(
         f"Schedule covers **{', '.join(schedule.effective_days)}** — "
         f"{schedule.start_time.strftime('%I:%M %p')} to {schedule.end_time.strftime('%I:%M %p')}"
     )
-    st.markdown(f"**Tasks scheduled:** {schedule.calculate_task_count()} of {len(st.session_state.tasks)}")
-    for task in schedule.tasks_scheduled:
-        pet_label = task.target_pet.name if task.target_pet else "—"
-        st.write(f"- **{task.name}** ({pet_label}) — {task.duration} min x{task.daily_frequency} [{task.priority}]")
+
+    # ── Conflict warnings ─────────────────────────────────────────────────────
+    if schedule.conflicts:
+        st.markdown("#### Scheduling Conflicts")
+        for conflict in schedule.conflicts:
+            st.warning(conflict)
+    else:
+        st.success(
+            f"No conflicts detected across {schedule.calculate_task_count()} scheduled tasks."
+        )
+
+    # ── Full sorted schedule table ────────────────────────────────────────────
+    st.markdown(
+        f"#### Full Schedule "
+        f"({schedule.calculate_task_count()} of {len(st.session_state.tasks)} tasks placed)"
+    )
+    sorted_tasks = sorted(schedule.tasks_scheduled)
+    st.dataframe(
+        [
+            {
+                "Time":     t.scheduled_time.strftime("%I:%M %p") if t.scheduled_time else "—",
+                "Task":     t.name,
+                "Pet":      t.target_pet.name if t.target_pet else "—",
+                "Duration": f"{t.duration} min",
+                "×/day":    t.daily_frequency,
+                "Priority": t.priority.capitalize(),
+                "Recurs":   t.recurrence.value if t.recurrence else "—",
+            }
+            for t in sorted_tasks
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # ── Per-pet filtered tabs (uses Schedule.filter_tasks) ────────────────────
+    pet_names_in_schedule = sorted({
+        t.target_pet.name for t in schedule.tasks_scheduled if t.target_pet
+    })
+    if pet_names_in_schedule:
+        st.markdown("#### By Pet")
+        for tab, pet_name in zip(st.tabs(pet_names_in_schedule), pet_names_in_schedule):
+            with tab:
+                pet_tasks = sorted(schedule.filter_tasks(pet_name=pet_name))
+                st.dataframe(
+                    [
+                        {
+                            "Time":     t.scheduled_time.strftime("%I:%M %p") if t.scheduled_time else "—",
+                            "Task":     t.name,
+                            "Duration": f"{t.duration} min",
+                            "×/day":    t.daily_frequency,
+                            "Priority": t.priority.capitalize(),
+                            "Recurs":   t.recurrence.value if t.recurrence else "—",
+                        }
+                        for t in pet_tasks
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+    # ── Reasoning expander ────────────────────────────────────────────────────
     with st.expander("Scheduling reasoning"):
         st.text(schedule.generate_reasoning_text())
