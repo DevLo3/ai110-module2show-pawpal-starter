@@ -2,10 +2,16 @@
 
 ## 1. System Design
 
+   The PawPal+ app should enable users to complete 3 core actions:
+        1. Add their pet to the app (with relevant pet attributes and a pet picture)
+        2. Create, edit, and delete tasks related to their pet (e.g. taking a walk, feeding, grooming, etc.)
+        3. Generate a daily plan to accomplish tasks for their pet (based on user requirements and constraints)
+
 **a. Initial design**
 
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
+
 
 **b. Design changes**
 
