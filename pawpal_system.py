@@ -86,7 +86,17 @@ class Task:
     priority: str           # "low" | "medium" | "high"
     target_pet: Optional[Pet] = None
     daily_frequency: int = 1
+    min_interval: int = 0   # minimum minutes required between occurrences (0 = no constraint)
+    is_complete: bool = False
     responsible_parents: list[Parent] = field(default_factory=list)
+
+    def mark_complete(self) -> None:
+        """Mark this task as completed."""
+        self.is_complete = True
+
+    def mark_incomplete(self) -> None:
+        """Reset this task to incomplete."""
+        self.is_complete = False
 
     def edit(self, **kwargs) -> None:
         """Update one or more task attributes by keyword."""
@@ -246,40 +256,70 @@ class Scheduler:
         best_day = max(effective_days, key=lambda d: sum(e - s for s, e in free_windows_for(d)))
         windows  = list(free_windows_for(best_day))
 
+        def consume_slot(
+            src_windows: list[tuple[int, int]], slot_start: int, duration: int
+        ) -> list[tuple[int, int]]:
+            """Remove a [slot_start, slot_start+duration] block from the window list."""
+            slot_end = slot_start + duration
+            result: list[tuple[int, int]] = []
+            for w_start, w_end in src_windows:
+                if w_end <= slot_start or w_start >= slot_end:
+                    result.append((w_start, w_end))
+                else:
+                    if w_start < slot_start:
+                        result.append((w_start, slot_start))
+                    if w_end > slot_end:
+                        result.append((slot_end, w_end))
+            return result
+
         # 3. Sort tasks: high → medium → low, then shorter duration first as tiebreaker
         sorted_tasks = sorted(
             self.tasks,
             key=lambda t: (_PRIORITY_ORDER.get(t.priority, 99), t.duration),
         )
 
-        # 4. Greedily fit each task into the remaining free windows
+        # 4. Greedily fit each task into the remaining free windows,
+        #    respecting min_interval between occurrences of the same task.
         scheduled: list[Task] = []
         reasoning_lines: list[str] = []
 
         for task in sorted_tasks:
             slots_needed = task.daily_frequency
             placed_times: list[str] = []
-            next_windows: list[tuple[int, int]] = []
+            remaining = list(windows)
+            last_placed_end: Optional[int] = None
 
-            for w_start, w_end in windows:
-                while len(placed_times) < slots_needed and (w_end - w_start) >= task.duration:
-                    slot = time(w_start // 60, w_start % 60)
-                    placed_times.append(slot.strftime("%I:%M %p"))
-                    w_start += task.duration
-                if w_end > w_start:
-                    next_windows.append((w_start, w_end))
+            for _ in range(slots_needed):
+                # The next occurrence can't start before this point
+                earliest = (last_placed_end + task.min_interval) if last_placed_end is not None else 0
+                placed = False
+
+                for w_start, w_end in remaining:
+                    slot_start = max(w_start, earliest)
+                    if slot_start + task.duration <= w_end:
+                        placed_times.append(time(slot_start // 60, slot_start % 60).strftime("%I:%M %p"))
+                        last_placed_end = slot_start + task.duration
+                        remaining = consume_slot(remaining, slot_start, task.duration)
+                        placed = True
+                        break
+
+                if not placed:
+                    break
 
             if len(placed_times) >= slots_needed:
                 scheduled.append(task)
-                windows = next_windows
+                windows = remaining
+                interval_note = (
+                    f", ≥{task.min_interval // 60}hr gap enforced" if task.min_interval > 0 else ""
+                )
                 reasoning_lines.append(
                     f"- '{task.name}' [{task.priority}]: scheduled {slots_needed}x "
-                    f"at {', '.join(placed_times)} ({task.duration} min each)"
+                    f"at {', '.join(placed_times)} ({task.duration} min each{interval_note})"
                 )
             else:
                 reasoning_lines.append(
-                    f"- '{task.name}' [{task.priority}]: skipped — not enough free time "
-                    f"(needs {task.duration * slots_needed} min total)"
+                    f"- '{task.name}' [{task.priority}]: skipped — could not fit {slots_needed} "
+                    f"occurrence(s) with ≥{task.min_interval} min between each"
                 )
 
         reasoning = "Schedule reasoning:\n" + "\n".join(reasoning_lines)

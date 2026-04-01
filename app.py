@@ -64,7 +64,13 @@ if st.button("Add task"):
 
 if st.session_state.tasks:
     st.write("Current tasks:")
-    st.table(st.session_state.tasks)
+    for i, task in enumerate(st.session_state.tasks):
+        checked = st.checkbox(
+            f"{task['title']} — {task['duration_minutes']} min ({task['priority']} priority)",
+            value=task.get("completed", False),
+            key=f"task_{i}",
+        )
+        st.session_state.tasks[i]["completed"] = checked
 else:
     st.info("No tasks yet. Add one above.")
 

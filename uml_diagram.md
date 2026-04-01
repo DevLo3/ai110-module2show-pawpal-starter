@@ -43,11 +43,15 @@ classDiagram
         +int dailyFrequency
         +String priority
         +Pet targetPet
+        +int minInterval
+        +bool isComplete
         +List~Parent~ responsibleParents
         +create()
         +edit()
         +delete()
         +duplicate()
+        +markComplete()
+        +markIncomplete()
     }
 
     class BusyPeriod {
