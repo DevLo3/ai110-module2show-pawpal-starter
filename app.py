@@ -1,6 +1,6 @@
 import streamlit as st
 
-from pawpal_system import BusyPeriod, Parent, Pet, Schedule, Scheduler, Task, TimePreference
+from pawpal_system import BusyPeriod, Parent, Pet, PRIORITY_ORDER, Recurrence, Schedule, Scheduler, Task, TimePreference
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -111,38 +111,57 @@ with st.form("task_form"):
         "Min hours between occurrences (0 = no constraint)",
         min_value=0, max_value=24, value=0,
     )
-    target_pet_name = st.selectbox("For pet", options=pet_names if pet_names else ["(add a pet first)"])
+    col1, col2 = st.columns(2)
+    with col1:
+        target_pet_name = st.selectbox("For pet", options=pet_names if pet_names else ["(add a pet first)"])
+    with col2:
+        recurrence_str = st.selectbox("Recurrence", ["none"] + [r.value for r in Recurrence])
     add_task = st.form_submit_button("Add Task")
 
 if add_task and pet_names:
-    target_pet = next((p for p in st.session_state.pets if p.name == target_pet_name), None)
-    new_task = Task(
-        name=task_title,
-        task_type=task_type,
-        duration=int(duration),
-        priority=priority,
-        daily_frequency=int(daily_freq),
-        min_interval=int(min_interval_hrs) * 60,
-        target_pet=target_pet,
-        responsible_parents=[st.session_state.owner] if st.session_state.owner else [],
+    duplicate = any(
+        t.name == task_title and (t.target_pet.name if t.target_pet else "") == target_pet_name
+        for t in st.session_state.tasks
     )
-    if target_pet is not None:
-        target_pet.tasks = target_pet.tasks + [new_task]
-    st.session_state.tasks = st.session_state.tasks + [new_task]
+    if duplicate:
+        st.warning(f"A task named '{task_title}' for {target_pet_name} already exists.")
+    else:
+        target_pet = next((p for p in st.session_state.pets if p.name == target_pet_name), None)
+        new_task = Task(
+            name=task_title,
+            task_type=task_type,
+            duration=int(duration),
+            priority=priority,
+            daily_frequency=int(daily_freq),
+            min_interval=int(min_interval_hrs) * 60,
+            target_pet=target_pet,
+            recurrence=Recurrence(recurrence_str) if recurrence_str != "none" else None,
+            responsible_parents=[st.session_state.owner] if st.session_state.owner else [],
+        )
+        if target_pet is not None:
+            target_pet.add_task(new_task)
+        st.session_state.tasks = st.session_state.tasks + [new_task]
 
 if st.session_state.tasks:
     st.write("Current tasks:")
-    for i, task in enumerate(st.session_state.tasks):
+    for i, task in enumerate(sorted(st.session_state.tasks, key=lambda t: PRIORITY_ORDER.get(t.priority, 99))):
         col1, col2 = st.columns([5, 1])
         with col1:
             pet_label = task.target_pet.name if task.target_pet else "—"
+            recur_label = f" · {task.recurrence.value}" if task.recurrence else ""
+            due_label = f" (next due {task.next_due})" if task.next_due else ""
             label = (
                 f"{task.name} ({pet_label}) — {task.duration} min x{task.daily_frequency}"
-                f" [{task.priority}]"
+                f" [{task.priority}]{recur_label}{due_label}"
             )
             checked = st.checkbox(label, value=task.is_complete, key=f"task_{i}")
             if checked and not task.is_complete:
-                task.mark_complete()
+                next_occ = task.mark_complete()
+                if next_occ is not None:
+                    if next_occ.target_pet is not None:
+                        next_occ.target_pet.add_task(next_occ)
+                    st.session_state.tasks = st.session_state.tasks + [next_occ]
+                    st.rerun()
             elif not checked and task.is_complete:
                 task.mark_incomplete()
         with col2:
@@ -169,6 +188,8 @@ if st.button("Generate Schedule"):
     elif not st.session_state.tasks:
         st.warning("Please add at least one task before generating a schedule.")
     else:
+        for t in st.session_state.tasks:
+            t.mark_incomplete()
         scheduler = Scheduler(
             target_pets=st.session_state.pets,
             parents=[st.session_state.owner],

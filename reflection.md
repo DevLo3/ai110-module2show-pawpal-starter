@@ -29,12 +29,18 @@
 **a. Constraints and priorities**
 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
+    The scheduler considers parent `TimePreference` (morning, midday, evening, night — each mapped to a concrete time window), `BusyPeriod` blocks that carve unavailable time out of that window, task `priority` (high → medium → low), task `duration`, `daily_frequency`, and `min_interval` (a required gap between occurrences of the same task). It also respects `is_complete` status, skipping already-finished tasks entirely.
+
 - How did you decide which constraints mattered most?
+    Priority was chosen as the primary sort key because missing a high-priority task (like medication) has real consequences for a pet's health, while a lower-priority task (like grooming) can flex. Pet clustering was added as a secondary sort criterion so all of one pet's tasks land together in the day, reducing the mental overhead of switching between animals mid-schedule.
 
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
+    The scheduler uses a greedy first-fit algorithm: it places each task into the earliest available slot and never backtracks. This means a high-priority long task placed early can block several shorter lower-priority tasks from fitting later, even though a different ordering would have accommodated everyone.
+
 - Why is that tradeoff reasonable for this scenario?
+    For a typical household with a small number of tasks (under ~20), the greedy approach produces a usable schedule in effectively zero time and is easy to reason about — the reasoning text it generates maps directly to the order decisions were made. A globally optimal solver would be harder to explain to a pet owner and would add complexity that isn't warranted at this scale.
 
 ---
 
